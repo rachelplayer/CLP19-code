@@ -1,7 +1,7 @@
 Homomorphic noise growth in practice: comparing BGV and FV
 ==========================================================
 
-This repository contains the code used to generate Tables 1--7 and Table 9 in [CLP19].
+This repository contains the code used to generate Tables 1--7 and Table 9 in the paper [CLP19], available here as 2019-493.pdf
 
 Experimental data in Tables 1, 2 and 5 was obtained using the provided HElib code [HElib]. Experimental data in Tables 3, 4, 6 and 7 was obtained using the provided Microsoft SEAL code [SEAL]. Heuristic bounds in these Tables were obtained using the provided python script `heuristics.py`.
 

@@ -20,7 +20,10 @@ To run any of these files in that version of HElib, follow the instructions [her
 Note that the files `helib-noise.cpp`, `helib-noise-budget.cpp` and `helib-invariant-noise-budget.cpp` all require a slight modification to the Ctxt class, namely that the `Ctxt::tensorProduct()` function is made public.
 
 **SEAL**
-The SEAL files were developed to run with Microsoft SEAL release 3.1. The easiest way to run the files with that version of SEAL:
+The SEAL files were developed to run with [Microsoft SEAL](https://github.com/microsoft/SEAL/) release 3.1.
+The commits corresponding to specific releases are not tagged, we used commit aa7bf57.
+
+The easiest way to run the files with that version of SEAL:
 - replace the file examples/examples.cpp with either `examples-invariant.cpp` or `examples-scaled-inherent.cpp`
 - rename this file as `examples.cpp`
 - follow the instructions on how to build the examples [here](https://github.com/microsoft/SEAL/blob/aa7bf57aa11a91d9ca8712816550ae68793add99/README.md)

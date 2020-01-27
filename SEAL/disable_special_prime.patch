@@ -1,0 +1,116 @@
+commit f158d02bd97b0d0c4f019d623da9e7c69987aa36
+Author: Kim Laine <kim.laine@microsoft.com>
+Date:   Thu Oct 24 21:10:41 2019 -0700
+
+    noise test
+
+diff --git a/native/src/seal/context.cpp b/native/src/seal/context.cpp
+index 2060b13..9d28405 100644
+--- a/native/src/seal/context.cpp
++++ b/native/src/seal/context.cpp
+@@ -364,17 +364,17 @@ namespace seal
+         // more than one modulus in coeff_modulus. This is equivalent to expanding
+         // the chain by one step. Otherwise, we set first_parms_id_ to equal
+         // key_parms_id_.
+-        if (!context_data_map_.at(key_parms_id_)->qualifiers_.parameters_set ||
+-            parms.coeff_modulus().size() == 1)
+-        {
++        //if (!context_data_map_.at(key_parms_id_)->qualifiers_.parameters_set ||
++            //parms.coeff_modulus().size() == 1)
++        //{
+             first_parms_id_ = key_parms_id_;
+-        }
+-        else
+-        {
+-            auto next_parms_id = create_next_context_data(key_parms_id_);
+-            first_parms_id_ = (next_parms_id == parms_id_zero) ?
+-                key_parms_id_ : next_parms_id;
+-        }
++        //}
++        //else
++        //{
++            //auto next_parms_id = create_next_context_data(key_parms_id_);
++            //first_parms_id_ = (next_parms_id == parms_id_zero) ?
++                //key_parms_id_ : next_parms_id;
++        //}
+ 
+         // Set last_parms_id_ to point to first_parms_id_
+         last_parms_id_ = first_parms_id_;
+diff --git a/native/src/seal/encryptor.cpp b/native/src/seal/encryptor.cpp
+index 97e931b..dce1d54 100644
+--- a/native/src/seal/encryptor.cpp
++++ b/native/src/seal/encryptor.cpp
+@@ -125,8 +125,8 @@ namespace seal
+ 
+         auto &context_data = *context_->get_context_data(parms_id);
+         auto &parms = context_data.parms();
+-        size_t coeff_mod_count = parms.coeff_modulus().size();
+-        size_t coeff_count = parms.poly_modulus_degree();
++        //size_t coeff_mod_count = parms.coeff_modulus().size();
++        //size_t coeff_count = parms.poly_modulus_degree();
+         bool is_ntt_form = false;
+ 
+         if (parms.scheme() == scheme_type::CKKS)
+@@ -150,38 +150,38 @@ namespace seal
+                 // Requires modulus switching
+                 auto &prev_context_data = *prev_context_data_ptr;
+                 auto &prev_parms_id = prev_context_data.parms_id();
+-                auto &base_converter = prev_context_data.base_converter();
++                //auto &base_converter = prev_context_data.base_converter();
+ 
+                 // Zero encryption without modulus switching
+                 Ciphertext temp(pool);
+                 util::encrypt_zero_asymmetric(public_key_, context_, prev_parms_id,
+                     is_ntt_form, temp);
+ 
+-                // Modulus switching
+-                for (size_t j = 0; j < 2; j++)
+-                {
+-                    if (is_ntt_form)
+-                    {
+-                        base_converter->round_last_coeff_modulus_ntt_inplace(
+-                            temp.data(j),
+-                            prev_context_data.small_ntt_tables(),
+-                            pool);
+-                    }
+-                    else
+-                    {
+-                        base_converter->round_last_coeff_modulus_inplace(
+-                            temp.data(j),
+-                            pool);
+-                    }
+-                    util::set_poly_poly(
+-                        temp.data(j),
+-                        coeff_count,
+-                        coeff_mod_count,
+-                        destination.data(j));
+-                }
++                //// Modulus switching
++                //for (size_t j = 0; j < 2; j++)
++                //{
++                    //if (is_ntt_form)
++                    //{
++                        //base_converter->round_last_coeff_modulus_ntt_inplace(
++                            //temp.data(j),
++                            //prev_context_data.small_ntt_tables(),
++                            //pool);
++                    //}
++                    //else
++                    //{
++                        //base_converter->round_last_coeff_modulus_inplace(
++                            //temp.data(j),
++                            //pool);
++                    //}
++                    //util::set_poly_poly(
++                        //temp.data(j),
++                        //coeff_count,
++                        //coeff_mod_count,
++                        //destination.data(j));
++                //}
+                 destination.is_ntt_form() = is_ntt_form;
+                 destination.scale() = temp.scale();
+-                destination.parms_id() = parms_id;
++                destination.parms_id() = prev_parms_id;
+             }
+             else
+             {

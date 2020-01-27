@@ -1,16 +1,15 @@
 ######################################################################################
-# This code is based on code developed for the publication [CS16].                   #
-#                                                                                    #
-# This code looks for suitable parameters for the BGV and FV schems, given a number  #
+# This code looks for suitable parameters for the BGV and FV schemes, given a number #
 # (zeta) of additions and a number (L) of multiplications. It loops through possible #
 # values for the chain of primes, computes the size of the resulting ciphertext      #
 # noise, and checks whether decryption can be correctly performed. If yes,           #
 # output the primes as correct parameters; else increment primes sizes and repeat.   #
 #                                                                                    #
+# This code is based on code developed for the publication [CS16].                   #
 # There are a number of changes from the original code:                              #
 #   - only consider one relinearization variant, which is the case KSVar = 1         #
 #   - remove the schemes YASHE and NTRU from the analysis                            #
-#   - only use one plaintext modulus, t = 3                                          #
+#   - only use plaintext moduli t = 3, 256, 32768                                    #
 #   - choose secure parameters according to Homomorphic Encryption Standard          #
 #   - rename several parameters for notational consistency:                          #
 #      - plaintext modulus p -> t                                                    #
@@ -23,7 +22,7 @@
 #      - lqLm1 -> bitsize_top_modulus                                                #
 #      - LQ -> lst_bitsizes_of_moduli_chain                                          #
 #      - lQ -> bitsize_ciphertext_modulus                                            #
-#   - rename several parameters for readability:                                     #
+#   - renaming for readability:                                                      #
 #      - fldsz -> field_size                                                         #
 #      - cipher_sz -> ciphertext_size                                                #
 #      - key_sz -> key_size                                                          #
@@ -38,23 +37,25 @@
 #      - eksz -> current_extended_key_size                                           #
 #                                                                                    #
 # Notes:                                                                             #
-# 1) In FV, we scale the invariant noise by the current modulus q,                   #
-#    to avoid working with very small fractions (c.f. heuristics.py)                 #
-# 2) This function writes to the output file submitted-version-output.txt            #
+# 1) In FV, we scale the invariant noise by the current modulus q, to avoid working  #
+#    with very small fractions                                                       #
+# 2) This function writes to the output file `comparison-output.txt`                 #
 # 3) We use the 'critical quantity' noise for BGV and 'invariant noise' for FV       #
-#                                                                                    #
-# [CS16] Ana Costache and Nigel P. Smart. Which ring based somewhat homomorphic      #
-# encryption scheme is best? In Kazue Sako, editor, CT-RSA 2016, volume 9610 of      #
-# LNCS, pages 325–340. Springer, Heidelberg, February / March 2016.                  #
 ######################################################################################
 
 # Initialise parameters for the first experiment
 scheme := BGV:
 L := 2:
+# Comment out as appropriate to select plaintext modulus t
 t := 3:
+#t := 256:
+#t := 32768:
+#t := 2**32:
+#t := 2**64:
+#t := 2**128:
 loop := true:
 
-appendto("../../Users/ufai006/noise/experiments/cs15-comparison/submitted-version-output.txt");
+appendto("comparison-output.txt");
 
 while (loop) do
   print(xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx):
@@ -66,7 +67,6 @@ while (loop) do
 
   # Set parameters
   sig := 3.2:
-  h := 64:
   zeta := 8:    # Number additions
   cm := 1:    # Ring constant is 1 for a power-of-two cyclotomic
 
@@ -81,21 +81,20 @@ while (loop) do
   if (scheme = BGV) then
     ciphertext_size := 2 * field_size:
     key_size := 2 * field_size:
-    fresh_noise := t * (sqrt(3*n) + 2 * sig * sqrt(n) * (16 * sqrt(h) + 3)):
-    mod_switch_additive_noise := t * sqrt(n) * (sqrt(3) + (8 * sqrt(h))/sqrt(3)):
-    relin_noise := 8/sqrt(3) * t * ceil(log(Q)/log(w)) * sig * n * w:
+    fresh_noise := 6 * t * sqrt((n/12) + n * sig * sig * ((4/3)*n + 1)):
+    mod_switch_additive_noise := 6 * t * sqrt((n/12) * (1 + 2*n/3)):
+    relin_noise := sqrt(3) * t * sqrt(ceil(log(Q)/log(w))) * sig * n * w:
     ekey_sz := key_size * (1 + bitsize_ciphertext_modulus/log[2](w)):
     MultFunc := nu1 * nu2:
     DecFunc := p0 / 2:
   elif (scheme = FV) then
     ciphertext_size := 2 * field_size:
     key_size := 2 * field_size:
-    m_can_bound := t * sqrt(3*n):
-    fresh_noise := t * (m_can_bound + 2 * sig * ( (16 * sqrt(2) / sqrt(3)) * n + 3 * sqrt(n))):
-    mod_switch_additive_noise := t * (sqrt(3*n) + (8 * sqrt(2) * n) / sqrt(3)):
-    relin_noise := 8/sqrt(3) * t * ceil(log(Q)/log(w)) * sig * n * w:
+    fresh_noise := 6 * sqrt(n) * t * sqrt(t*t/12 + sig * sig * (4*n/3 + 1)):
+    mod_switch_additive_noise := t * sqrt(3*n + 2*n*n):
+    relin_noise := sqrt(3) * t * sqrt(ceil(log(Q)/log(w))) * sig * n * w:
     ekey_sz := key_size * (1 + bitsize_ciphertext_modulus/log[2](w)):
-    MultFunc := (3/q) * nu1 * nu2 + ((1/sqrt(12)) * 2 * t * sqrt(n) * (3 + ((8*sqrt(2)/sqrt(3)) * sqrt(n)) + (40*n/3)) + (2 * m_can_bound)) * nu1 + ((1/sqrt(12)) * 2 * t * sqrt(n) * (3 + ((8*sqrt(2)/sqrt(3)) * sqrt(n)) + (40*n/3)) + (2 * m_can_bound)) * nu2 + (1/sqrt(12)) * 2 * t * sqrt(n) * (3 + ((8*sqrt(2)/sqrt(3)) * sqrt(n)) + (40*n/3)):
+    MultFunc := (3/q) * nu1 * nu2 + sqrt(2*n*n + 3*n) * t  * (nu1 + nu2) + t * sqrt(3*n + 2*n*n + (4/3)*n*n*n):
     DecFunc := p0 / 2:
   else
     print(Wrong);

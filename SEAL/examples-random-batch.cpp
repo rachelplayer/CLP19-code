@@ -1,11 +1,9 @@
 /*
-    SEAL 3.1 experiments developed from https://github.com/microsoft/SEAL commit ba2d578
+    SEAL 3.4 experiments
     This is a modified version of SEAL/examples/examples.cpp
-    This file was run to obtain SEAL scaled inherent noise data in Tables 6 & 7
-    To run this file, the modified version of Decryptor, including decryptor.new_noise_budget(), must be used
+    This file was run to obtain SEAL invariant noise data in Tables 3 & 4
 */
 
-#include <iostream>
 #include <iomanip>
 #include <vector>
 #include <string>
@@ -48,7 +46,7 @@ Helper function: Prints the parameters in a SEALContext.
 */
 void print_parameters(const shared_ptr<SEALContext> &context)
 {
-    auto &context_data = *context->context_data();
+    auto &context_data = *context->key_context_data();
 
     /*
     Which scheme are we using?
@@ -86,8 +84,8 @@ void print_parameters(const shared_ptr<SEALContext> &context)
             parms().plain_modulus().value() << endl;
     }
 
-    cout << "\\ noise_standard_deviation: " << context_data.
-        parms().noise_standard_deviation() << endl;
+    cout << "\\ noise_standard_deviation: " <<
+        util::global_variables::noise_standard_deviation << endl;
     cout << endl;
 }
 
@@ -106,7 +104,7 @@ int main()
     while (true)
     {
         cout << "\nModified SEAL Examples:" << endl << endl;
-        cout << "  1. New Noise Test" << endl;
+        cout << "  1. Invariant Noise Test" << endl;
         cout << "  0. Exit" << endl;
 
         int selection = 0;
@@ -182,20 +180,17 @@ void test_noise(int trials)
     if(is_n_2048)
     {
         parms.set_poly_modulus_degree(2048);
-        parms.set_coeff_modulus(coeff_modulus_128(2048));
+        parms.set_coeff_modulus(CoeffModulus::BFVDefault(2048));
     }
     else
     {    
-        parms.set_poly_modulus_degree(4096);
-        parms.set_coeff_modulus(coeff_modulus_128(4096));
+        //parms.set_poly_modulus_degree(4096);
+        //parms.set_coeff_modulus(CoeffModulus::BFVDefault(4096));
         //parms.set_poly_modulus_degree(8192);
-        //parms.set_coeff_modulus(coeff_modulus_128(8192));
-        //parms.set_poly_modulus_degree(16384);
-        //parms.set_coeff_modulus(coeff_modulus_128(16384));
+        //parms.set_coeff_modulus(CoeffModulus::BFVDefault(8192));
+        parms.set_poly_modulus_degree(16384);
+        parms.set_coeff_modulus(CoeffModulus::BFVDefault(16384));
     }    
-    
-    /* Choose a typical plaintext modulus t for IntegerEncoder */
-    //parms.set_plain_modulus(1 << 8);
 
     /* Need to choose t such that t is a prime number congruent to 1 modulo 2n */
     parms.set_plain_modulus(65537);
@@ -204,14 +199,14 @@ void test_noise(int trials)
     print_parameters(context);
 
     /* Construct an encoder */
-    //IntegerEncoder encoder(parms.plain_modulus()); // binary encoder
     BatchEncoder encoder(context);
 
     /* Only needed for batching */
-    auto qualifiers = context->context_data()->qualifiers();
+    auto qualifiers = context->first_context_data()->qualifiers();
     cout << "Batching enabled: " << boolalpha << qualifiers.using_batching << endl;
+    bool using_keyswitching = context->using_keyswitching();
+    cout << "Keyswitching enabled: " << boolalpha << using_keyswitching << endl;
     size_t slot_count = encoder.slot_count();
-    cout << "There are " << slot_count << " slots" << endl;
     size_t row_size = slot_count / 2;
     auto print_matrix = [row_size](auto &matrix)
     {
@@ -245,12 +240,13 @@ void test_noise(int trials)
        }
         cout << endl;
     };
+    int r1, r2;
 
     /* Construct other object needed for the experiment */
     KeyGenerator keygen(context);
     PublicKey public_key = keygen.public_key();
     SecretKey secret_key = keygen.secret_key();
-    auto relin_keys16 = keygen.relin_keys(16);
+    RelinKeys relin_keys = using_keyswitching ? keygen.relin_keys() : RelinKeys();
     Encryptor encryptor(context, public_key);
     Evaluator evaluator(context);
     Decryptor decryptor(context, secret_key);
@@ -283,14 +279,15 @@ void test_noise(int trials)
     for (int i = 2; i < trials+2; i++)
     {
         /* Encode the raw data into plaintexts */
-        //plain1 = encoder.encode(i);
-        //plain2 = encoder.encode(i-1);
         vector<uint64_t> pod_matrix1;
         vector<uint64_t> pod_matrix2;
         for (size_t j = 0; j < slot_count; j++)
         {
-            pod_matrix1.push_back(j);
-            pod_matrix2.push_back(j+1);
+            /* 2nd batching experiment: random plaintext modulo the plaintext modulus */
+            r1 = rand() % 65537;
+            r2 = rand() % 65537;
+            pod_matrix1.push_back(r1+j);
+            pod_matrix2.push_back(r2+j);
         }      
         encoder.encode(pod_matrix1, plain1);
         encoder.encode(pod_matrix2, plain2);
@@ -300,7 +297,7 @@ void test_noise(int trials)
         encryptor.encrypt(plain2, encrypted2);
 
         /* What is the noise in the fresh ciphertext encrypted1? */
-        auto fresh_noise_budget = decryptor.new_noise_budget(encrypted1);
+        auto fresh_noise_budget = decryptor.invariant_noise_budget(encrypted1);
         total_fresh_observed += fresh_noise_budget;
         array_fresh_observed.push_back(fresh_noise_budget);
 
@@ -308,7 +305,7 @@ void test_noise(int trials)
         evaluator.add_inplace(encrypted1, encrypted2);
 
         /* What is the noise growth when adding two fresh ciphertexts? */
-        auto add_noise_budget = decryptor.new_noise_budget(encrypted1);
+        auto add_noise_budget = decryptor.invariant_noise_budget(encrypted1);
         total_add_observed += add_noise_budget;
         array_add_observed.push_back(add_noise_budget);
 
@@ -316,17 +313,20 @@ void test_noise(int trials)
         evaluator.multiply_inplace(encrypted1, encrypted2);
 
         /* What is the noise growth when multiplying these two ciphertexts? */
-        auto mult_noise_budget = decryptor.new_noise_budget(encrypted1);
+        auto mult_noise_budget = decryptor.invariant_noise_budget(encrypted1);
         total_mult_observed += mult_noise_budget;
         array_mult_observed.push_back(mult_noise_budget);
 
-        /* Relinearize the ciphertext encrypted1 in place */ 
-        evaluator.relinearize_inplace(encrypted1, relin_keys16);
+        if (using_keyswitching)
+        {
+            /* Relinearize the ciphertext encrypted1 in place */ 
+            evaluator.relinearize_inplace(encrypted1, relin_keys);
 
-        /* What is the noise growth when relinearizing? */
-        auto relin_noise_budget = decryptor.new_noise_budget(encrypted1);
-        total_relin_observed += relin_noise_budget;
-        array_relin_observed.push_back(relin_noise_budget);
+            /* What is the noise growth when relinearizing? */
+            auto relin_noise_budget = decryptor.invariant_noise_budget(encrypted1);
+            total_relin_observed += relin_noise_budget;
+            array_relin_observed.push_back(relin_noise_budget);
+        }
 
         if(!is_n_2048)
         {
@@ -334,7 +334,7 @@ void test_noise(int trials)
             evaluator.mod_switch_to_next_inplace(encrypted1);
         
             /* What is the noise growth when modulus switching? */
-            auto mod_switch_noise_budget = decryptor.new_noise_budget(encrypted1);
+            auto mod_switch_noise_budget = decryptor.invariant_noise_budget(encrypted1);
             total_mod_switch_observed += mod_switch_noise_budget;
             array_mod_switch_observed.push_back(mod_switch_noise_budget);
         }
@@ -344,7 +344,7 @@ void test_noise(int trials)
     auto mean_fresh_observed = total_fresh_observed/trials;
     auto mean_add_observed = total_add_observed/trials;
     auto mean_mult_observed = total_mult_observed/trials;
-    auto mean_relin_observed = total_relin_observed/trials;
+    auto mean_relin_observed = using_keyswitching ? total_relin_observed/trials : 0.0;
     double mean_mod_switch_observed;
     if(!is_n_2048)
     {
@@ -355,7 +355,7 @@ void test_noise(int trials)
     double std_dev_fresh = get_standard_dev(mean_fresh_observed, array_fresh_observed, trials);
     double std_dev_add = get_standard_dev(mean_add_observed, array_add_observed, trials);
     double std_dev_mult = get_standard_dev(mean_mult_observed, array_mult_observed, trials);
-    double std_dev_relin = get_standard_dev(mean_relin_observed, array_relin_observed, trials);
+    double std_dev_relin = using_keyswitching ? get_standard_dev(mean_relin_observed, array_relin_observed, trials) : 0.0;
     double std_dev_mod_switch;
     if(!is_n_2048)
     {
@@ -378,10 +378,13 @@ void test_noise(int trials)
     cout << "Standard deviation of noise budget observed: " << std_dev_mult << endl;        
     cout << endl;   
 
-    cout << "Relinearization of c4 (with decomposition bit count " << relin_keys16.decomposition_bit_count() << "): " << endl; 
-    cout << "Mean noise budget observed: " << mean_relin_observed << " bits" << endl;
-    cout << "Standard deviation of noise budget observed: " << std_dev_relin << endl;  
-    cout << endl;      
+    if (using_keyswitching)
+    {
+        cout << "Relinearization of c4: " << endl; 
+        cout << "Mean noise budget observed: " << mean_relin_observed << " bits" << endl;
+        cout << "Standard deviation of noise budget observed: " << std_dev_relin << endl;  
+        cout << endl;      
+    }
 
     if(!is_n_2048)
     {
@@ -397,14 +400,13 @@ void test_noise(int trials)
     decryptor.decrypt(encrypted1, plain_result);
 
     /* Decode the resulting plaintext */
-    //cout << "In the final trial we compute (" << trials+1 << " plus " << trials << "), multiplied by " << trials << endl;
-    //cout << "Plaintext polynomial: " << plain_result.to_string() << endl;
-    //cout << "Decoded integer: " << encoder.decode_int32(plain_result) << endl;
-    cout << "In the n^th slot, we compute (n-1 + n) * n: " << endl;
     vector<uint64_t> pod_result;
     encoder.decode(plain_result, pod_result);
     cout << "Decoded matrix: " << endl;
     print_matrix(pod_result);
+
+    /* Sanity check the random plaintext */
+    cout << "In the last trial we encryped " << r1 << " and " << r2 << endl;
 }
 
 

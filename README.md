@@ -1,23 +1,23 @@
 Evaluating the effectiveness of heuristic worst-case noise analysis in FHE
 ==========================================================
 
-This repository contains the code used to generate Tables 1--8 and Tables 10--12 in [CLP19].
+This repository contains the code used to generate Tables 1--9 in [CLP19].
 
-Experimental data in Tables 1 and 2 was obtained using the provided HElib code [HElib]. Experimental data in Tables 3, 4, and 8 was obtained using the provided Microsoft SEAL code [SEAL]. 
+Experimental data in Tables 1 and 2 was obtained using the provided HElib code [HElib]. Experimental data in Tables 3 and 4 was obtained using the provided Microsoft SEAL code [SEAL]. 
 
-Noise growth estimates using the Iliashenko heuristic bounds [I19]  in Tables 1--4 and Table 8 were obtained using python scripts `heuristics-iliashenko.py`, `get-heuristics-iliashenko-helib.py` and `get-heuristics-iliashenko-seal.py`. Noise growth estimates using previous heuristic bounds [CS16, CLP17] were obtained using python scripts `heuristics.py`, `get-heuristics-helib.py` and `get-heuristics-seal.py`.
+Noise growth estimates using the Iliashenko heuristic bounds [I19]  in Tables 1--4 were obtained using python scripts `heuristics-iliashenko.py`, `get-heuristics-iliashenko-helib.py` and `get-heuristics-iliashenko-seal.py`. Noise growth estimates using previous heuristic bounds [CS16, CLP17] were obtained using python scripts `heuristics.py`, `get-heuristics-helib.py` and `get-heuristics-seal.py`.
 
-Data for the comparison of BGV and FV in Tables 5--7 and Tables 10--12 was obtained by running the provided Maple script `comparison.mpl`, which is based on code developed for a comparison presented in prior work of Costache and Smart [CS16].
+Data for the comparison of BGV and FV in Tables 5--9 was obtained by running the provided Maple script `comparison.mpl`, which is based on code developed for a comparison presented in prior work of Costache and Smart [CS16].
 
 
 Running the code
 ----------------
 
 **Heuristics** 
-The python script are best run using SageMath [SAGE]. To obtain the Iliashenko bounds for HElib (Tables 1 and 2) in Sage run `load("heuristics-iliashenko.py")` then `load("get-heuristics-iliashenko-helib.py")`. To obtain the Iliashenko bounds for SEAL (Tables 3, 4 and 8) run `load("heuristics-iliashenko.py")` then `load("get-heuristics-iliashenko-seal.py")`. To obtain the previous bounds for HElib (Tables 1 and 2) run `load("heuristics.py")` then `load("get-heuristics-helib.py")`. To obtain the previous bounds for SEAL (Tables 3, 4 and 8) run `load("heuristics.py")` then `load("get-heuristics-seal.py")`.
+The python script are best run using SageMath [SAGE]. To obtain the Iliashenko bounds for HElib (Tables 1 and 2) in Sage run `load("heuristics-iliashenko.py")` then `load("get-heuristics-iliashenko-helib.py")`. To obtain the Iliashenko bounds for SEAL (Tables 3 and 4) run `load("heuristics-iliashenko.py")` then `load("get-heuristics-iliashenko-seal.py")`. To obtain the previous bounds for HElib (Tables 1 and 2) run `load("heuristics.py")` then `load("get-heuristics-helib.py")`. To obtain the previous bounds for SEAL (Tables 3 and 4) run `load("heuristics.py")` then `load("get-heuristics-seal.py")`.
 
 **Comparison**
-The file `comparison.mpl` is used to generate Tables 5--7 and Tables 10--12 by selecting the appropriate plaintext modulus (line 50). The file `comparison.mpl` can be run directly provided Maple is installed.
+The file `comparison.mpl` is used to generate Tables 5--9 by selecting the appropriate plaintext modulus (line 50). The file `comparison.mpl` can be run directly provided Maple is installed.
 
 **BGV noise data from HElib**
 The HElib files `helib-noise.cpp` and `helib-noise-budget.cpp` were developed to run with the January 2019 [release](https://github.com/shaih/HElib/commits/1.0.0-beta0-Jan2019) of HElib. 
@@ -35,7 +35,7 @@ SEAL uses a so-called special prime when `coeff_modulus` (the ciphertext modulus
 
 (2) If you want to disable the special prime to see how a plain FV implementation would perform, you must first clone SEAL 3.4.3, then copy `disable_special_prime.patch` to your SEAL directory and type `git apply disable_special_prime.patch`. This will break relinearization and rotation but the full `coeff_modulus` will be used for ciphertexts. After building SEAL, install it, and then rebuild the noise test as described in (1). No change to the noise test code is required.
 
-The SEAL results reported in Tables 3, 4 and 8 were obtained by disabling the special prime. The results in Tables 3 and 4 were obtained using the executable `noisetest`, which corresponds to the file `examples-invariant.cpp`. The results in Table 8 were obtained using the executable `noisetest_batched`, which corresponds to the file `examples-random-batch.cpp`.
+The SEAL results reported in Tables 3 and 4 were obtained by disabling the special prime. The results in Tables 3 and 4 were obtained using the executable `noisetest`, which corresponds to the file `examples-invariant.cpp`. The executable `noisetest_batched`, which corresponds to the file `examples-random-batch.cpp`, produces data for a batching setting where plaintexts are chosen randomly. The results can be seen to be very similar to those in Table 4.
 
 
 Bibliography
@@ -43,6 +43,7 @@ Bibliography
 [CLP17] Hao Chen and Kim Laine and Rachel Player. Simple Encrypted Arithmetic Library - SEAL v2.2. Technical report, Microsoft Research, 2017.
 
 [CLP19] Anamaria Costache and Kim Laine and Rachel Player. Evaluating the effectiveness of heuristic worst-case noise analysis in FHE. Preprint, 2019. Available at https://eprint.iacr.org/2019/493
+Accepted for publication at ESORICS 2020.
 
 [CS16] Ana Costache and Nigel P. Smart. Which ring based somewhat homomorphic encryption scheme is best? In Kazue Sako, editor, CT-RSA 2016, volume 9610 of LNCS, pages 325–340. Springer, Heidelberg, February / March 2016.
 

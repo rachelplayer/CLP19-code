@@ -1,11 +1,8 @@
-/* 
-    HElib experiments
-    Some of this code is adapted from Section 5 of https://github.com/shaih/HElib/blob/master/doc/designDocument/he-library.pdf 
-    Some of this code is adapted SEAL/examples/examples.cpp at https://github.com/microsoft/SEAL commit ba2d578
-    This code requires the following changes to be made to HElib:
-       1) make Ctxt::tensorProduct public so we can do homomorphic multiplication without automatically mod switching or relinearizing
-       2) (for debugging only) add a function Ctxt::getSize to determine the size of a ciphertext
-    This file was run to obtain HElib critical quantity data in Table 1
+/* Some code adapted from Section 5 of https://github.com/shaih/HElib/blob/master/doc/designDocument/he-library.pdf 
+ * Some code adapted from SEALExamples
+ * This code requires the following changes to be made to HElib:
+ *   1) make Ctxt::tensorProduct public so we can do homomorphic multiplication without automatically mod switching or relinearizing
+ *   2) (for debugging only) add a function Ctxt::getSize to determine the size of a ciphertext
 */
 
 #include <iostream>
@@ -158,7 +155,6 @@ void test_noise(int trials)
 
     /* Set other parameters to HElib defaults */
     long c = 2;    // columns in key switching matrix, default is 2 or 3
-    long w = 64;   // Hamming weight of secret, default is 64
     long k = 80;   // security parameter, default is 80 (may not correspond to true bit security)
     
     /* Check that choice of m is ok */
@@ -199,7 +195,7 @@ void test_noise(int trials)
     /* Generate keys */
     FHESecKey secret_key(context);
     const FHEPubKey& public_key = secret_key;
-    long secret_key_ID = secret_key.GenSecKey(w, p);
+    long secret_key_ID = secret_key.GenSecKey(p);
     addSome1DMatrices(secret_key);
      
     /* Construct plaintext and ciphertext objects */
